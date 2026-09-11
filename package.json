@@ -1,0 +1,19 @@
+{
+  "name": "telegram-cloud-storage",
+  "version": "1.0.0",
+  "description": "Cloud file storage backed by Telegram, using a Telegram bot and chat as the storage backend.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^2.0.1",
+    "nanoid": "^3.3.7"
+  }
+}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Telegram Cloud Storage</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="login-screen" class="screen">
+    <form id="login-form" class="card">
+      <h1>Telegram Cloud Storage</h1>
+      <p>Masukkan password untuk melanjutkan.</p>
+      <input type="password" id="password" placeholder="Password" autofocus required />
+      <button type="submit">Masuk</button>
+      <p id="login-error" class="error" hidden></p>
+    </form>
+  </div>
+
+  <div id="app-screen" class="screen" hidden>
+    <header>
+      <h1>Telegram Cloud Storage</h1>
+      <button id="logout-btn" class="secondary">Keluar</button>
+    </header>
+
+    <label id="dropzone" for="file-input">
+      <input type="file" id="file-input" hidden />
+      <span>Klik atau seret file ke sini untuk upload</span>
+      <span class="hint">Maks. 50MB per file (batas Telegram Bot API)</span>
+    </label>
+
+    <ul id="upload-progress"></ul>
+
+    <table id="file-table">
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Ukuran</th>
+          <th>Diupload</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="file-list"></tbody>
+    </table>
+    <p id="empty-state" hidden>Belum ada file. Upload file pertamamu di atas.</p>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
