@@ -2,8 +2,9 @@
 
 Cloud file storage sederhana yang memakai Telegram sebagai backend penyimpanan.
 File yang kamu upload dikirim sebagai dokumen ke sebuah chat/channel Telegram lewat
-bot, sementara metadata (nama, ukuran, referensi file) disimpan di SQLite lokal
-supaya bisa dilist, diunduh, dan dihapus lagi lewat web UI.
+bot, sementara metadata (nama, ukuran, referensi file, folder) disimpan di SQLite
+lokal supaya bisa dilist, diunduh, dan dihapus lagi lewat web UI. File juga bisa
+dikelompokkan ke dalam folder (dan subfolder) untuk memudahkan navigasi.
 
 ## Cara kerja
 
@@ -82,13 +83,16 @@ Buka `http://localhost:3000`, masukkan `APP_PASSWORD`, lalu mulai upload file.
 Semua endpoint (kecuali `/api/login`) butuh header
 `Authorization: Bearer <APP_PASSWORD>`.
 
-| Method | Path                     | Keterangan                          |
-| ------ | ------------------------ | ------------------------------------ |
-| POST   | `/api/login`             | `{ password }` → `{ token }`         |
-| GET    | `/api/files`             | List semua file                      |
-| POST   | `/api/files`             | Upload file (`multipart/form-data`, field `file`) |
-| GET    | `/api/files/:id/download`| Download file                        |
-| DELETE | `/api/files/:id`         | Hapus file (dari Telegram + index)   |
+| Method | Path                       | Keterangan                          |
+| ------ | -------------------------- | ------------------------------------ |
+| POST   | `/api/login`               | `{ password }` → `{ token }`         |
+| GET    | `/api/folders?parentId=`   | List subfolder dalam folder tsb (kosongkan `parentId` untuk root) |
+| POST   | `/api/folders`             | `{ name, parentId? }` → buat folder baru |
+| DELETE | `/api/folders/:id`         | Hapus folder (harus kosong, kalau tidak → 409) |
+| GET    | `/api/files?folderId=`     | List file dalam folder tsb (kosongkan `folderId` untuk root) |
+| POST   | `/api/files`               | Upload file (`multipart/form-data`, field `file`, opsional field `folderId`) |
+| GET    | `/api/files/:id/download`  | Download file                        |
+| DELETE | `/api/files/:id`           | Hapus file (dari Telegram + index)   |
 
 ## Struktur proyek
 

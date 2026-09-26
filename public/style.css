@@ -78,6 +78,47 @@ header {
   margin-bottom: 20px;
 }
 
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+#breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+#breadcrumb button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 2px 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+#breadcrumb button:disabled {
+  color: var(--text);
+  cursor: default;
+  font-weight: 600;
+}
+
+#breadcrumb .sep { color: var(--muted); }
+
+tr.folder-row { cursor: pointer; }
+
+tr.folder-row td:first-child::before {
+  content: "\1F4C1  ";
+}
+
 #dropzone {
   display: flex;
   flex-direction: column;

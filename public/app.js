@@ -10,6 +10,15 @@ const fileInput = document.getElementById('file-input');
 const uploadProgress = document.getElementById('upload-progress');
 const fileList = document.getElementById('file-list');
 const emptyState = document.getElementById('empty-state');
+const breadcrumb = document.getElementById('breadcrumb');
+const newFolderBtn = document.getElementById('new-folder-btn');
+
+// Stack of {id, name} from root to the folder currently being viewed. Root = { id: null, name: 'Home' }.
+let currentPath = [{ id: null, name: 'Home' }];
+
+function currentFolderId() {
+  return currentPath[currentPath.length - 1].id;
+}
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -54,20 +63,114 @@ function formatDate(iso) {
   return new Date(`${iso}Z`).toLocaleString();
 }
 
+function renderBreadcrumb() {
+  breadcrumb.innerHTML = '';
+  currentPath.forEach((entry, index) => {
+    if (index > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = '/';
+      breadcrumb.append(sep);
+    }
+    const btn = document.createElement('button');
+    btn.textContent = entry.name;
+    const isCurrent = index === currentPath.length - 1;
+    btn.disabled = isCurrent;
+    if (!isCurrent) {
+      btn.onclick = () => {
+        currentPath = currentPath.slice(0, index + 1);
+        refreshFiles();
+      };
+    }
+    breadcrumb.append(btn);
+  });
+}
+
 async function refreshFiles() {
-  const res = await fetch('/api/files', { headers: authHeaders() });
-  if (res.status === 401) {
+  renderBreadcrumb();
+  const folderId = currentFolderId();
+  const query = folderId ? `?parentId=${encodeURIComponent(folderId)}` : '';
+  const fileQuery = folderId ? `?folderId=${encodeURIComponent(folderId)}` : '';
+
+  const [foldersRes, filesRes] = await Promise.all([
+    fetch(`/api/folders${query}`, { headers: authHeaders() }),
+    fetch(`/api/files${fileQuery}`, { headers: authHeaders() }),
+  ]);
+
+  if (foldersRes.status === 401 || filesRes.status === 401) {
     clearToken();
     showLogin();
     return;
   }
-  const { files } = await res.json();
-  renderFiles(files);
+
+  const { folders } = await foldersRes.json();
+  const { files } = await filesRes.json();
+  renderEntries(folders, files);
 }
 
-function renderFiles(files) {
+function openFolder(folder) {
+  currentPath = [...currentPath, { id: folder.id, name: folder.name }];
+  refreshFiles();
+}
+
+async function createFolder() {
+  const name = prompt('Nama folder baru:');
+  if (!name || !name.trim()) return;
+
+  const res = await fetch('/api/folders', {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name.trim(), parentId: currentFolderId() }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    alert(body.error || 'Gagal membuat folder.');
+    return;
+  }
+  refreshFiles();
+}
+
+async function deleteFolder(folder) {
+  if (!confirm(`Hapus folder "${folder.name}"?`)) return;
+  const res = await fetch(`/api/folders/${folder.id}`, { method: 'DELETE', headers: authHeaders() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    alert(body.error || 'Gagal menghapus folder.');
+    return;
+  }
+  refreshFiles();
+}
+
+function renderEntries(folders, files) {
   fileList.innerHTML = '';
-  emptyState.hidden = files.length > 0;
+  emptyState.hidden = folders.length + files.length > 0;
+
+  for (const folder of folders) {
+    const row = document.createElement('tr');
+    row.className = 'folder-row';
+
+    const nameCell = document.createElement('td');
+    nameCell.textContent = folder.name;
+    nameCell.onclick = () => openFolder(folder);
+
+    const sizeCell = document.createElement('td');
+    sizeCell.onclick = () => openFolder(folder);
+
+    const dateCell = document.createElement('td');
+    dateCell.textContent = formatDate(folder.createdAt);
+    dateCell.onclick = () => openFolder(folder);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'secondary';
+    deleteBtn.textContent = 'Hapus';
+    deleteBtn.onclick = () => deleteFolder(folder);
+    actionsCell.append(deleteBtn);
+
+    row.append(nameCell, sizeCell, dateCell, actionsCell);
+    fileList.append(row);
+  }
 
   for (const file of files) {
     const row = document.createElement('tr');
@@ -129,6 +232,10 @@ async function uploadFiles(fileListArg) {
 
     const formData = new FormData();
     formData.append('file', file);
+    const folderId = currentFolderId();
+    if (folderId) {
+      formData.append('folderId', folderId);
+    }
 
     try {
       const res = await fetch('/api/files', {
@@ -171,8 +278,11 @@ loginForm.addEventListener('submit', async (e) => {
 
 logoutBtn.addEventListener('click', () => {
   clearToken();
+  currentPath = [{ id: null, name: 'Home' }];
   showLogin();
 });
+
+newFolderBtn.addEventListener('click', createFolder);
 
 dropzone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => uploadFiles(fileInput.files));

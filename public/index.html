@@ -23,6 +23,11 @@
       <button id="logout-btn" class="secondary">Keluar</button>
     </header>
 
+    <div class="toolbar">
+      <nav id="breadcrumb" aria-label="Lokasi folder"></nav>
+      <button id="new-folder-btn" class="secondary">+ Folder baru</button>
+    </div>
+
     <label id="dropzone" for="file-input">
       <input type="file" id="file-input" hidden />
       <span>Klik atau seret file ke sini untuk upload</span>
@@ -42,7 +47,7 @@
       </thead>
       <tbody id="file-list"></tbody>
     </table>
-    <p id="empty-state" hidden>Belum ada file. Upload file pertamamu di atas.</p>
+    <p id="empty-state" hidden>Folder ini masih kosong. Buat folder atau upload file di atas.</p>
   </div>
 
   <script src="/app.js"></script>

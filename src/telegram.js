@@ -25,10 +25,10 @@ async function callApi(method, body) {
   return data.result;
 }
 
-async function uploadFile(buffer, filename, mimeType) {
+async function uploadFile(buffer, filename, mimeType, caption) {
   const form = new FormData();
   form.append('chat_id', chatId);
-  form.append('caption', filename);
+  form.append('caption', caption || filename);
   form.append('document', new Blob([buffer], { type: mimeType || 'application/octet-stream' }), filename);
 
   const message = await callApi('sendDocument', { body: form });

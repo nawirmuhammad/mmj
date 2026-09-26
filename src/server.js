@@ -39,12 +39,62 @@ app.post('/api/login', (req, res) => {
   res.json({ token: APP_PASSWORD });
 });
 
+function folderPath(folderId) {
+  const parts = [];
+  let current = folderId ? db.getFolder(folderId) : null;
+  while (current) {
+    parts.unshift(current.name);
+    current = current.parent_id ? db.getFolder(current.parent_id) : null;
+  }
+  return parts.join('/');
+}
+
+app.get('/api/folders', requireAuth, (req, res) => {
+  const parentId = req.query.parentId || null;
+  const folders = db.listFolders(parentId).map((f) => ({
+    id: f.id,
+    name: f.name,
+    parentId: f.parent_id,
+    createdAt: f.created_at,
+  }));
+  res.json({ folders });
+});
+
+app.post('/api/folders', requireAuth, (req, res) => {
+  const name = (req.body?.name || '').trim();
+  const parentId = req.body?.parentId || null;
+  if (!name) {
+    return res.status(400).json({ error: 'Folder name is required' });
+  }
+  if (parentId && !db.getFolder(parentId)) {
+    return res.status(404).json({ error: 'Parent folder not found' });
+  }
+
+  const folder = { id: nanoid(), name, parent_id: parentId };
+  db.createFolder(folder);
+  res.status(201).json({ id: folder.id, name: folder.name, parentId: folder.parent_id });
+});
+
+app.delete('/api/folders/:id', requireAuth, (req, res) => {
+  const folder = db.getFolder(req.params.id);
+  if (!folder) {
+    return res.status(404).json({ error: 'Folder not found' });
+  }
+  if (db.folderHasChildren(folder.id)) {
+    return res.status(409).json({ error: 'Folder is not empty' });
+  }
+  db.deleteFolder(folder.id);
+  res.status(204).end();
+});
+
 app.get('/api/files', requireAuth, (req, res) => {
-  const files = db.listFiles().map((f) => ({
+  const folderId = req.query.folderId || null;
+  const files = db.listFiles(folderId).map((f) => ({
     id: f.id,
     name: f.name,
     size: f.size,
     mimeType: f.mime_type,
+    folderId: f.folder_id,
     createdAt: f.created_at,
   }));
   res.json({ files });
@@ -55,11 +105,19 @@ app.post('/api/files', requireAuth, upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded (field name must be "file")' });
   }
 
+  const folderId = req.body?.folderId || null;
+  if (folderId && !db.getFolder(folderId)) {
+    return res.status(404).json({ error: 'Folder not found' });
+  }
+
   try {
+    const parentPath = folderPath(folderId);
+    const caption = parentPath ? `${parentPath}/${req.file.originalname}` : req.file.originalname;
     const { telegramFileId, telegramMessageId } = await telegram.uploadFile(
       req.file.buffer,
       req.file.originalname,
-      req.file.mimetype
+      req.file.mimetype,
+      caption
     );
 
     const record = {
@@ -69,6 +127,7 @@ app.post('/api/files', requireAuth, upload.single('file'), async (req, res) => {
       mime_type: req.file.mimetype,
       telegram_file_id: telegramFileId,
       telegram_message_id: telegramMessageId,
+      folder_id: folderId,
     };
     db.insertFile(record);
 
@@ -77,6 +136,7 @@ app.post('/api/files', requireAuth, upload.single('file'), async (req, res) => {
       name: record.name,
       size: record.size,
       mimeType: record.mime_type,
+      folderId: record.folder_id,
     });
   } catch (err) {
     console.error('Upload failed:', err);
